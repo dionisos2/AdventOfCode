@@ -5,12 +5,10 @@ def parse_input(file_path):
 
 	return result
 
-
-test1 = ["1abc2", "pqr3stu8vwx", "a1b2c3d4e5f", "treb7uchet"]
-test2 = ["two1nine", "eightwothree", "abcone2threexyz", "xtwone3four", "4nineeightseven2", "zoneight234", "7pqrstsixteen"]
-
-def get_digits(str, reverse = False):
-	return filter(lambda x:x.isdigit(), str)
+def get_digits(string, reverse = False):
+	if reverse:
+		string = reversed(string)
+	return filter(lambda x:x.isdigit(), string)
 
 numbers = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
 reversed_numbers = [n[::-1] for n in numbers]
@@ -19,6 +17,7 @@ def get_spelled_digits(string, reverse = False):
 	global reversed_numbers, numbers
 
 	if reverse:
+		string = string[::-1]
 		nums = reversed_numbers
 	else:
 		nums = numbers
@@ -34,18 +33,13 @@ def get_spelled_digits(string, reverse = False):
 			except ValueError:
 				continue
 
+
 def problem1(data, get_digits = get_digits):
-	result = 0
+	value = lambda line: int(next(get_digits(line)) + next(get_digits(line, True)))
 
-	for line in data:
-		first = next(get_digits(line))
-		last = next(get_digits(line[::-1], True))
-		result += int(first + last)
-
-	return result
+	return sum(value(line) for line in data)
 
 data = parse_input("input1")
-# problem1(data)
-problem1(data, get_spelled_digits)
 
-
+print(problem1(data))
+print(problem1(data, get_spelled_digits))
