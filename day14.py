@@ -25,8 +25,7 @@ def day14(platform):
 	return result
 
 def get_block(platform, coord):
-	row, column = coord
-	return platform[row][column]
+	return platform[coord[0]][coord[1]]
 
 def swap_blocks(platform, coord1, coord2):
 	row1, column1 = coord1
