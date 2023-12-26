@@ -32,7 +32,8 @@ function create_a_star_functions(city)
 
 	in_boundaries(matrix, coords) = all((1,1) .<= coords .<= size(matrix))
   function get_neighbours(node::Node)
-		dirs = ((0,1), (0,-1), (1,0), (-1,0))
+		i, j = node.last_move
+		dirs = ((i, j), (j, i), (-j, -i))
 		result = []
 
 		for dir in dirs
@@ -120,20 +121,20 @@ end
 
 function day17(city)
 	funcs = create_a_star_functions(city)
-	start = Node((1, 1), (0, 0), 0)
+	start = Node((1, 1), (0, 1), 0)
 	path = a_star(start, funcs...)
-	println(path)
+	# println(path)
 	cost = funcs[:cost]
-	display_path(city, path)
-	println()
-	return sum(cost(nothing,node) for node in path)
+	# display_path(city, path)
+	# println()
+	return sum(cost(nothing,node) for node in path[2:end])
 end
 
 function day17_2(city)
 	return city
 end
 
-city = parse_input("input17_test")
+city = parse_input("input17")
 result = day17(city)
 
 display(result)
