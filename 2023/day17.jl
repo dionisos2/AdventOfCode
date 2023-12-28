@@ -7,6 +7,7 @@ using OrderedCollections
 using Compat
 using DataStructures
 using BenchmarkTools
+using StatProfilerHTML
 
 struct Node
 	coords::Tuple{Int, Int}
@@ -16,14 +17,14 @@ end
 
 function parse_input(file_path)
 	open(file_path) do file
-		return permutedims(stack(eachline(file)))
+		return map(x->parse(Int, x), permutedims(stack(eachline(file))))
 	end
 end
 
 in_boundaries(matrix, coords) = all((1,1) .<= coords .<= size(matrix))
 
 function create_a_star_functions(city)
-  function heuristic(node)
+  function heuristic(node::Node)
     gi, gj = size(city)
     bi, bj = node.coords
     return (gi - bi) + (gj - bj)
@@ -34,7 +35,6 @@ function create_a_star_functions(city)
 
 	for (i, line) in Iterators.reverse(enumerate(eachrow(city)))
 		for (j, value) in Iterators.reverse(enumerate(line))
-			value = parse(Int, value)
 			if i+1 > li && j+1 > lj
 				min_cost[i, j] = value
 			elseif i+1 > li
@@ -47,18 +47,18 @@ function create_a_star_functions(city)
 		end
 	end
 
-	function better_heuristic(node)
+	function better_heuristic(node::Node)::Int
 		return min_cost[node.coords...]
 	end
 
-  function cost(_, node2)
-		return parse(Int, city[node2.coords...])
+  function cost(_, node2::Node)::Int
+		return city[node2.coords...]
   end
 
-  function get_neighbours(node::Node)
+  function get_neighbours(node::Node)::Array{Node}
 		i, j = node.last_move
 		dirs = ((i, j), (j, i), (-j, -i))
-		result = []
+		result = Node[]
 
 		for dir in dirs
 			new_coords = node.coords.+dir
@@ -76,17 +76,14 @@ function create_a_star_functions(city)
 		return result
   end
 
-  function isgoal(node)
+  function isgoal(node::Node)
     return node.coords == size(city)
   end
-
-
-
 
 	return (get_neighbours=get_neighbours, isgoal=isgoal, cost=cost, heuristic=better_heuristic)
 end
 
-function reconstruct_path(come_from, current)
+function reconstruct_path(come_from, current::Node)
   total_path = [current]
   while current in keys(come_from)
     current = come_from[current]
@@ -95,17 +92,18 @@ function reconstruct_path(come_from, current)
   return total_path
 end
 
+const NodeType=Node
 function a_star(start, get_neighbours, isgoal, cost, heuristic)
-	come_from = Dict()
-	gscore = DefaultDict(Inf)
+	come_from = Dict{NodeType, NodeType}()
+	gscore = DefaultDict{NodeType, Int}(typemax(Int))
 	gscore[start] = 0
-	fscore = DefaultDict(Inf)
+	fscore = DefaultDict{NodeType, Int}(typemax(Int))
 	fscore[start] = heuristic(start)
 
 
-	isless(node1::Node, node2::Node) = fscore[node1] < fscore[node2]
+	isless(node1::NodeType, node2::NodeType) = fscore[node1] < fscore[node2]
 
-	heap_nodes = MutableBinaryHeap(Base.Order.Lt(isless), [start])
+	heap_nodes = MutableBinaryHeap{NodeType}(Base.Order.Lt(isless), [start])
 	nodes = Set([start])
 
 	while !isempty(heap_nodes)
@@ -143,7 +141,7 @@ function display_path(city, path)
 	end
 end
 
-function find_length(city, funcs)
+function find_length(funcs)
 	start = Node((1, 1), (0, 1), 0)
 	path = a_star(start, funcs...)
 	cost = funcs[:cost]
@@ -154,10 +152,10 @@ end
 function create_a_star_functions_2(city)
 	_, _, cost, heuristic = create_a_star_functions(city)
 
-	function get_neighbours(node::Node)
+	function get_neighbours(node::Node)::Array{Node}
 		i, j = node.last_move
 		dirs = ((i, j), (j, i), (-j, -i))
-		result = []
+		result = Node[]
 
 		for dir in dirs
 			new_coords = node.coords.+dir
@@ -174,7 +172,7 @@ function create_a_star_functions_2(city)
 		return result
 	end
 
-	function isgoal(node)
+	function isgoal(node::Node)::Bool
     return node.coords == size(city) && node.move >= 4
   end
 
@@ -182,11 +180,11 @@ function create_a_star_functions_2(city)
 end
 
 function day17(city)
-	return find_length(city, create_a_star_functions(city))
+	return find_length(create_a_star_functions(city))
 end
 
 function day17_2(city)
-	return find_length(city, create_a_star_functions_2(city))
+	return find_length(create_a_star_functions_2(city))
 end
 
 function compile()
@@ -208,10 +206,13 @@ city = parse_input("input17")
 # better_heuristic :
 # 613.975 ms (2883789 allocations: 115.30 MiB)
 # 3.979 s (14287796 allocations: 544.28 MiB)
+# remove principals type instabilities :
+# 263.579 ms (180765 allocations: 102.14 MiB)
+# 1.357 s (807683 allocations: 509.05 MiB)
+
+# @profilehtml day17_2(city)
 
 result = day17_2(city)
-
-
 display(result)
 clipboard(string(result))
 
