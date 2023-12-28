@@ -6,6 +6,7 @@ using InteractiveUtils
 using OrderedCollections
 using Compat
 using DataStructures
+using BenchmarkTools
 
 struct Node
 	coords::Tuple{Int, Int}
@@ -19,6 +20,8 @@ function parse_input(file_path)
 	end
 end
 
+in_boundaries(matrix, coords) = all((1,1) .<= coords .<= size(matrix))
+
 function create_a_star_functions(city)
   function heuristic(node)
     gi, gj = size(city)
@@ -26,11 +29,32 @@ function create_a_star_functions(city)
     return (gi - bi) + (gj - bj)
   end
 
+	min_cost = fill(0, size(city))
+	li, lj = size(city)
+
+	for (i, line) in Iterators.reverse(enumerate(eachrow(city)))
+		for (j, value) in Iterators.reverse(enumerate(line))
+			value = parse(Int, value)
+			if i+1 > li && j+1 > lj
+				min_cost[i, j] = value
+			elseif i+1 > li
+				min_cost[i, j] = value + min_cost[i, j+1]
+			elseif j+1 > lj
+				min_cost[i, j] = value + min_cost[i+1, j]
+			else
+				min_cost[i, j] = value + min(min_cost[i, j+1], min_cost[i+1, j])
+			end
+		end
+	end
+
+	function better_heuristic(node)
+		return min_cost[node.coords...]
+	end
+
   function cost(_, node2)
 		return parse(Int, city[node2.coords...])
   end
 
-	in_boundaries(matrix, coords) = all((1,1) .<= coords .<= size(matrix))
   function get_neighbours(node::Node)
 		i, j = node.last_move
 		dirs = ((i, j), (j, i), (-j, -i))
@@ -59,7 +83,7 @@ function create_a_star_functions(city)
 
 
 
-	return (get_neighbours=get_neighbours, isgoal=isgoal, cost=cost, heuristic=heuristic)
+	return (get_neighbours=get_neighbours, isgoal=isgoal, cost=cost, heuristic=better_heuristic)
 end
 
 function reconstruct_path(come_from, current)
@@ -119,23 +143,74 @@ function display_path(city, path)
 	end
 end
 
-function day17(city)
-	funcs = create_a_star_functions(city)
+function find_length(city, funcs)
 	start = Node((1, 1), (0, 1), 0)
 	path = a_star(start, funcs...)
-	# println(path)
 	cost = funcs[:cost]
-	# display_path(city, path)
-	# println()
+
 	return sum(cost(nothing,node) for node in path[2:end])
 end
 
-function day17_2(city)
-	return city
+function create_a_star_functions_2(city)
+	_, _, cost, heuristic = create_a_star_functions(city)
+
+	function get_neighbours(node::Node)
+		i, j = node.last_move
+		dirs = ((i, j), (j, i), (-j, -i))
+		result = []
+
+		for dir in dirs
+			new_coords = node.coords.+dir
+			if in_boundaries(city, new_coords)
+				if node.last_move == dir && node.move < 10
+					new_node = Node(new_coords, node.last_move, node.move+1)
+					push!(result, new_node)
+				elseif node.last_move != dir && node.move > 3
+					new_node = Node(new_coords, dir, 1)
+					push!(result, new_node)
+				end
+			end
+		end
+		return result
+	end
+
+	function isgoal(node)
+    return node.coords == size(city) && node.move >= 4
+  end
+
+	return (get_neighbours=get_neighbours, isgoal=isgoal, cost=cost, heuristic=heuristic)
 end
 
+function day17(city)
+	return find_length(city, create_a_star_functions(city))
+end
+
+function day17_2(city)
+	return find_length(city, create_a_star_functions_2(city))
+end
+
+function compile()
+	city = parse_input("input17_test")
+	result = day17(city)
+	result2 = day17_2(city)
+	return (result, result2)
+end
+
+display(compile())
+
 city = parse_input("input17")
-result = day17(city)
+
+@btime day17(city)
+@btime day17_2(city)
+# heuristic :
+# 1.195 s (7142074 allocations: 275.69 MiB)
+# 6.514 s (26264199 allocations: 1010.81 MiB)
+# better_heuristic :
+# 613.975 ms (2883789 allocations: 115.30 MiB)
+# 3.979 s (14287796 allocations: 544.28 MiB)
+
+result = day17_2(city)
+
 
 display(result)
 clipboard(string(result))
