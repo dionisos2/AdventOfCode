@@ -92,8 +92,8 @@ function reconstruct_path(come_from, current::Node)
   return total_path
 end
 
-const NodeType=Node
 function a_star(start, get_neighbours, isgoal, cost, heuristic)
+	NodeType = typeof(start)
 	come_from = Dict{NodeType, NodeType}()
 	gscore = DefaultDict{NodeType, Int}(typemax(Int))
 	gscore[start] = 0
@@ -101,7 +101,7 @@ function a_star(start, get_neighbours, isgoal, cost, heuristic)
 	fscore[start] = heuristic(start)
 
 
-	isless(node1::NodeType, node2::NodeType) = fscore[node1] < fscore[node2]
+	isless(node1, node2) = fscore[node1] < fscore[node2]
 
 	heap_nodes = MutableBinaryHeap{NodeType}(Base.Order.Lt(isless), [start])
 	nodes = Set([start])
@@ -124,6 +124,7 @@ function a_star(start, get_neighbours, isgoal, cost, heuristic)
 			end
 		end
 	end
+
 	return nothing
 end
 
@@ -198,8 +199,8 @@ display(compile())
 
 city = parse_input("input17")
 
-@btime day17(city)
-@btime day17_2(city)
+# @btime day17(city)
+# @btime day17_2(city)
 # heuristic :
 # 1.195 s (7142074 allocations: 275.69 MiB)
 # 6.514 s (26264199 allocations: 1010.81 MiB)
